@@ -1,0 +1,2264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LinguaCheck</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=DM+Mono:wght@400;500&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#1a1a2e;--ink-soft:#3d3d5c;--ink-muted:#7a7a9a;
+  --page:#faf9f6;--page-warm:#f4f1ea;--accent:#c8662a;--accent-soft:#f0e0d0;
+  --success:#2a7a4a;--border:rgba(26,26,46,0.12);--border-strong:rgba(26,26,46,0.25);
+  --radius:10px;--mono:'DM Mono',monospace;--serif:'Playfair Display',Georgia,serif;--sans:'Lato',sans-serif;
+}
+body{font-family:var(--sans);background:var(--page);color:var(--ink);min-height:100vh;font-size:15px;line-height:1.6;user-select:none;-webkit-user-select:none}
+.app-header{background:var(--ink);color:#faf9f6;padding:1.1rem 2rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;gap:10px}
+.logo{font-family:var(--serif);font-size:1.45rem;font-weight:600;letter-spacing:-0.02em}
+.logo span{color:#e8a87c}
+.header-right{display:flex;align-items:center;gap:10px;min-width:0}
+.powered-badge{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.15);padding:4px 12px;border-radius:20px;color:#ddd;letter-spacing:0.06em}
+button.powered-badge{cursor:pointer;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block}
+button.powered-badge:hover{background:rgba(255,255,255,0.16)}
+button.powered-badge.warn{border-color:#f0b27a;color:#ffd9b0}
+button.powered-badge:disabled{cursor:default}
+.history-btn{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;background:rgba(255,255,255,0.1);border:0.5px solid rgba(255,255,255,0.2);padding:4px 12px;border-radius:20px;color:#fff;letter-spacing:0.06em;cursor:pointer;transition:background 0.15s}
+.history-btn:hover{background:rgba(255,255,255,0.18)}
+.container{max-width:860px;margin:0 auto;padding:2rem 1.5rem 5rem}
+.step{margin-bottom:1.5rem;background:white;border:0.5px solid var(--border-strong);border-radius:var(--radius);overflow:hidden;transition:box-shadow 0.2s,border-color 0.2s,opacity 0.2s}
+.step.active{box-shadow:0 0 0 2px var(--accent)}
+.step.done{border-color:var(--success)}
+.step.locked{opacity:0.45;pointer-events:none}
+.step-header{padding:0.9rem 1.25rem;background:var(--page-warm);border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:10px}
+.step-num{width:26px;height:26px;border-radius:50%;background:var(--ink-muted);color:white;font-family:var(--mono);font-size:12px;font-weight:500;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background 0.2s}
+.step.active .step-num{background:var(--accent)}
+.step.done .step-num{background:var(--success)}
+.step-title{font-family:var(--serif);font-size:1rem;font-weight:500;flex:1}
+.step-meta{font-family:var(--mono);font-size:10px;color:var(--ink-muted);letter-spacing:0.05em}
+.step-body{padding:1.25rem}
+.section-label{font-family:var(--mono);font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-muted);margin-bottom:8px;display:block;word-break:break-all}
+.btn{font-family:var(--sans);font-size:13px;font-weight:700;padding:9px 20px;border:none;border-radius:6px;cursor:pointer;transition:all 0.15s;letter-spacing:0.02em;white-space:nowrap;display:inline-flex;align-items:center;gap:7px}
+.btn-sm{padding:6px 12px;font-size:12px}
+.btn-primary{background:var(--accent);color:white}
+.btn-primary:hover{background:#a8521e}
+.btn-primary:active{transform:scale(0.98)}
+.btn-secondary{background:transparent;color:var(--ink-soft);border:0.5px solid var(--border-strong)}
+.btn-secondary:hover{background:var(--page-warm)}
+.btn-danger{background:transparent;color:#a32d2d;border:0.5px solid #f09595}
+.btn-danger:hover{background:#fdf0f0}
+.btn-success{background:var(--success);color:white}
+.btn-success:hover{background:#1d6038}
+.btn:disabled{opacity:0.4;cursor:not-allowed;transform:none!important}
+.action-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center}
+.action-row .spacer{flex:1}
+.out-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:8px}
+textarea{width:100%;font-family:var(--sans);font-size:15px;line-height:1.85;padding:1rem;border:0.5px solid var(--border-strong);border-radius:6px;background:var(--page);color:var(--ink);resize:vertical;min-height:200px;outline:none;user-select:text;-webkit-user-select:text}
+textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(200,102,42,0.12)}
+select{font-family:var(--sans);font-size:14px;padding:8px 10px;border:0.5px solid var(--border-strong);border-radius:6px;background:var(--page);color:var(--ink);max-width:100%}
+.textarea-footer{display:flex;justify-content:space-between;align-items:center;margin-top:8px;min-height:22px}
+.word-count{font-family:var(--mono);font-size:11px;color:var(--ink-muted);letter-spacing:0.05em}
+.info-bar{display:flex;align-items:center;gap:8px;padding:7px 12px;background:#fffdf5;border:0.5px solid #efd580;border-radius:6px;margin-bottom:10px;font-family:var(--mono);font-size:11px;color:#634f06;letter-spacing:0.04em}
+.dot-pulse{width:7px;height:7px;border-radius:50%;background:#e4a700;flex-shrink:0;animation:pulseY 2s ease-in-out infinite}
+@keyframes pulseY{0%,100%{opacity:1}50%{opacity:0.35}}
+.file-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;font-size:13px}
+.file-row label{font-weight:700;color:var(--ink-soft)}
+.file-row input[type=file]{font-size:12px;max-width:100%}
+.file-note{font-family:var(--mono);font-size:11px;color:var(--ink-muted);width:100%}
+.queue-head{display:flex;justify-content:space-between;align-items:center;margin-top:12px;margin-bottom:6px;font-family:var(--mono);font-size:11px;color:var(--ink-soft);gap:8px;flex-wrap:wrap}
+.file-list{border:0.5px solid var(--border-strong);border-radius:6px;max-height:220px;overflow-y:auto;background:var(--page)}
+.file-item{display:flex;align-items:center;gap:10px;padding:6px 10px;border-bottom:0.5px solid var(--border);font-size:13px}
+.file-item:last-child{border-bottom:none}
+.file-name{font-weight:700;flex:1;word-break:break-all}
+.file-meta{font-family:var(--mono);font-size:10px;color:var(--ink-muted);text-align:right}
+.file-meta.err{color:#a32d2d}
+.file-x{background:none;border:none;color:#a32d2d;cursor:pointer;font-size:18px;line-height:1;padding:0 6px;border-radius:4px}
+.file-x:hover{background:#fdf0f0}
+.doc-table{border:0.5px solid var(--border-strong);border-radius:6px;max-height:220px;overflow-y:auto;margin-bottom:14px}
+.doc-row{display:flex;gap:10px;align-items:center;width:100%;text-align:left;padding:8px 10px;border:none;border-bottom:0.5px solid var(--border);background:#fff;cursor:pointer;font-family:var(--sans);font-size:13px;color:var(--ink)}
+.doc-row:last-child{border-bottom:none}
+.doc-row:hover{background:var(--page-warm)}
+.doc-row.sel{background:var(--accent-soft)}
+.doc-row .dn{flex:1;font-weight:700;word-break:break-all}
+.doc-row .dm{font-family:var(--mono);font-size:10px;color:var(--ink-muted);text-align:right}
+.doc-row .dm.err{color:#a32d2d}
+.rev-doc{display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:13px;font-weight:700;color:var(--ink-soft);flex-wrap:wrap}
+.annotated-output{font-family:var(--sans);font-size:15px;line-height:2.6;padding:1rem;background:var(--page);border:0.5px solid var(--border-strong);border-radius:6px;min-height:120px;word-break:break-word;user-select:text;-webkit-user-select:text}
+.para-line{white-space:pre-wrap;margin-bottom:0.35rem;min-height:1.4em}
+.muted-note{color:var(--ink-muted);font-family:var(--mono);font-size:13px}
+.missed-note{font-family:var(--mono);font-size:11px;color:var(--ink-muted);margin-top:8px;line-height:1.5}
+.ec-N{--ec:#8e44ad}.ec-VF{--ec:#d35400}.ec-VT{--ec:#16a085}
+.ec-SVA{--ec:#c0392b}.ec-RO{--ec:#c47a10}.ec-ART{--ec:#1a6fa8}
+.err-word{border-bottom:2.5px solid var(--ec,#c8662a);font-weight:700;color:var(--ec,#c8662a);display:inline}
+.err-badge{font-family:var(--mono);font-size:12px;color:white;background:var(--ec,#c8662a);padding:2px 7px;border-radius:4px;vertical-align:super;white-space:nowrap;line-height:1.6;margin-left:2px;font-weight:600;letter-spacing:0.03em}
+.stat-row{display:none;gap:10px;margin-top:12px;flex-wrap:wrap}
+.stat-card{flex:1;min-width:80px;background:var(--page-warm);border-radius:6px;padding:10px 14px;text-align:center}
+.stat-num{font-family:var(--mono);font-size:22px;font-weight:500;color:var(--accent);display:block}
+.stat-lbl{font-family:var(--mono);font-size:10px;color:var(--ink-muted);letter-spacing:0.06em;text-transform:uppercase}
+.legend{display:flex;flex-wrap:wrap;gap:5px;margin-top:12px}
+.legend-item{font-family:var(--mono);font-size:10px;padding:3px 8px;background:var(--accent-soft);border-radius:4px;color:var(--ink-soft);letter-spacing:0.04em}
+.export-preview{font-family:var(--mono);font-size:12px;padding:12px 14px;background:var(--ink);color:#b8f2c8;border-radius:6px;white-space:pre-wrap;word-break:break-word;max-height:240px;overflow-y:auto;line-height:1.7;user-select:text;-webkit-user-select:text}
+.dl-fallback{font-family:var(--mono);font-size:11px;margin-top:8px;color:var(--ink-soft);text-align:right;word-break:break-all}
+.dl-fallback a{color:var(--accent);text-decoration:underline;cursor:pointer}
+.spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,0.35);border-top-color:white;border-radius:50%;animation:spin 0.7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast{position:fixed;bottom:2rem;right:2rem;background:var(--ink);color:#faf9f6;font-family:var(--mono);font-size:12px;padding:10px 18px;border-radius:8px;z-index:9999;opacity:0;transform:translateY(10px);transition:all 0.25s;pointer-events:none;max-width:340px}
+.toast.show{opacity:1;transform:translateY(0)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;display:none;align-items:center;justify-content:center;padding:1rem}
+.modal-overlay.open{display:flex}
+.modal{background:white;border-radius:var(--radius);width:100%;max-width:620px;max-height:85vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.25)}
+.modal.wide{max-width:560px}
+.modal-header{padding:1rem 1.25rem;background:var(--page-warm);border-bottom:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-family:var(--serif);font-size:1rem;font-weight:500}
+.modal-close{background:none;border:none;font-size:18px;cursor:pointer;color:var(--ink-muted);line-height:1;padding:2px 6px;border-radius:4px}
+.modal-close:hover{background:var(--page-warm);color:var(--ink)}
+.modal-body{overflow-y:auto;padding:1rem;flex:1;user-select:text;-webkit-user-select:text}
+.history-empty{font-family:var(--mono);font-size:12px;color:var(--ink-muted);text-align:center;padding:2rem 0}
+.history-item{border:0.5px solid var(--border-strong);border-radius:8px;padding:12px 14px;margin-bottom:10px;cursor:pointer;transition:border-color 0.15s,background 0.15s}
+.history-item:hover{border-color:var(--accent);background:var(--accent-soft)}
+.history-item-meta{font-family:var(--mono);font-size:10px;color:var(--ink-muted);margin-bottom:5px;display:flex;justify-content:space-between}
+.history-item-preview{font-size:13px;color:var(--ink-soft);line-height:1.5;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.history-item-del{background:none;border:none;color:#c0392b;cursor:pointer;font-size:13px;padding:2px 5px;border-radius:4px;font-family:var(--mono)}
+.history-item-del:hover{background:#fdf0f0}
+.set-field{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+.set-field label{font-weight:700;font-size:13px;color:var(--ink-soft)}
+.set-field input[type=text],.set-field input[type=password],.set-field select{font-family:var(--sans);font-size:14px;padding:9px 10px;border:0.5px solid var(--border-strong);border-radius:6px;background:var(--page);color:var(--ink);width:100%}
+.key-row{display:flex;gap:8px}
+.set-note{font-family:var(--mono);font-size:11px;color:var(--ink-muted);line-height:1.5}
+.set-warn{font-family:var(--mono);font-size:11px;color:#634f06;background:#fffdf5;border:0.5px solid #efd580;border-radius:6px;padding:8px 10px;margin-bottom:12px;line-height:1.5}
+.set-check{display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:12px}
+.set-status{font-family:var(--mono);font-size:12px;margin-top:10px;min-height:18px;word-break:break-word}
+.set-status.ok{color:var(--success)}
+.set-status.err{color:#a32d2d}
+.set-hint{font-size:13px;color:#a32d2d;margin-bottom:10px}
+.set-details{font-size:12px;color:var(--ink-soft);margin-top:14px;line-height:1.5}
+.set-details summary{cursor:pointer;font-weight:700}
+.set-details p{margin-top:6px}
+@media(max-width:600px){
+  .container{padding:1rem 1rem 3rem}
+  .action-row{flex-direction:column}
+  .btn{width:100%;justify-content:center}
+  .app-header{padding:1rem}
+  .logo{font-size:1.2rem}
+  button.powered-badge{max-width:150px}
+}
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="logo">Lingua<span>Check</span></div>
+  <div class="header-right">
+    <button class="history-btn" id="historyBtn">&#128196; History</button>
+    <button class="powered-badge" id="aiBadge" type="button">&#10022; AI</button>
+  </div>
+</header>
+
+<div class="modal-overlay" id="historyModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Text History</div>
+      <button class="modal-close" id="modalClose">&times;</button>
+    </div>
+    <div class="modal-body" id="historyList"></div>
+  </div>
+</div>
+
+<!-- ===== AI SETTINGS ===== -->
+<div class="modal-overlay" id="aiModal">
+  <div class="modal wide">
+    <div class="modal-header">
+      <div class="modal-title">AI Settings</div>
+      <button class="modal-close" id="aiClose">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="set-hint" id="aiHint" hidden></p>
+
+      <div class="set-field">
+        <label for="aiProvider">AI provider</label>
+        <select id="aiProvider">
+          <option value="builtin">Claude.ai built-in (no key; only works inside Claude.ai)</option>
+          <option value="anthropic">Anthropic (Claude) &mdash; API key</option>
+          <option value="openai">OpenAI &mdash; API key</option>
+          <option value="gemini">Google Gemini &mdash; API key</option>
+          <option value="custom">Custom / proxy (OpenAI-compatible endpoint)</option>
+        </select>
+      </div>
+
+      <div class="set-note" id="aiBuiltinNote" style="margin-bottom:12px;">This option needs no key, but it only works while this page runs inside Claude.ai. On any other website, choose one of the other providers and enter a key or a proxy URL.</div>
+
+      <div class="set-field" id="aiKeyWrap">
+        <label for="aiKey" id="aiKeyLabel">API key</label>
+        <div class="key-row">
+          <input type="password" id="aiKey" autocomplete="off" spellcheck="false" placeholder="Paste your API key">
+          <button type="button" class="btn btn-secondary btn-sm" id="aiShow">Show</button>
+        </div>
+      </div>
+
+      <div class="set-field" id="aiModelWrap">
+        <label for="aiModel">Model</label>
+        <input type="text" id="aiModel" list="aiModelList" autocomplete="off" spellcheck="false">
+        <datalist id="aiModelList"></datalist>
+        <span class="set-note">You can type any model name your provider offers. Check the provider's documentation for current names.</span>
+      </div>
+
+      <div class="set-field" id="aiUrlWrap">
+        <label for="aiUrl">Base URL</label>
+        <input type="text" id="aiUrl" autocomplete="off" spellcheck="false">
+        <span class="set-note" id="aiUrlNote"></span>
+      </div>
+
+      <label class="set-check" id="aiRememberWrap"><input type="checkbox" id="aiRemember"> Remember on this device (otherwise only for this browser tab)</label>
+
+      <div class="set-warn" id="aiWarn">Your key is saved only in this browser and is sent only to the provider you choose. Anyone who can use this browser can read it, so do not enter a key on a shared computer.</div>
+
+      <div class="action-row" style="margin-top:0;">
+        <button type="button" class="btn btn-secondary" id="aiTest">Test connection</button>
+        <button type="button" class="btn btn-primary" id="aiSave">Save</button>
+        <span class="spacer"></span>
+        <button type="button" class="btn btn-danger" id="aiClearKey">Remove saved key</button>
+      </div>
+      <div class="set-status" id="aiStatus" role="status"></div>
+
+      <details class="set-details">
+        <summary>Deploying this website publicly?</summary>
+        <p>A key stored in the browser can be read by anyone who uses that browser. On a public website, choose <b>Custom</b> and enter the URL of your own proxy (the proxy keeps the key on the server), or let each teacher enter their own key.</p>
+        <p>Site owners can also preset the AI and lock this screen by editing the <b>deploy-config</b> block near the end of the page source.</p>
+      </details>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="step active" id="step1">
+    <div class="step-header">
+      <div class="step-num">1</div>
+      <div class="step-title">Write or Upload Your Texts</div>
+      <div class="step-meta">Type, paste or upload in bulk</div>
+    </div>
+    <div class="step-body">
+      <div class="info-bar">
+        <div class="dot-pulse"></div>
+        Type or paste one text, and/or add many .txt or .docx files at once
+      </div>
+      <textarea id="studentText" placeholder="Type or paste a text here (optional if you upload files)&#8230;" spellcheck="false" autocorrect="off" autocapitalize="off" autocomplete="off"></textarea>
+      <div class="textarea-footer">
+        <span class="word-count" id="wordCount">0 words &middot; 0 sentences</span>
+      </div>
+      <div class="file-row">
+        <label for="fileIn">Upload files (bulk):</label>
+        <input type="file" id="fileIn" multiple accept=".txt,.docx,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+        <span class="file-note">Select many files at once, or drag and drop them here. Each file is analyzed separately and keeps its name.</span>
+      </div>
+      <div id="fileListWrap" hidden>
+        <div class="queue-head">
+          <span id="queueCount"></span>
+          <button class="btn btn-secondary btn-sm" id="clearQueueBtn">Remove all files</button>
+        </div>
+        <div class="file-list" id="fileList"></div>
+      </div>
+      <div class="action-row">
+        <button class="btn btn-primary" id="analyzeBtn">Analyze</button>
+        <span class="spacer"></span>
+        <button class="btn btn-danger" id="clearBtn">Clear text</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="step locked" id="step2">
+    <div class="step-header">
+      <div class="step-num">2</div>
+      <div class="step-title">Annotated Feedback</div>
+      <div class="step-meta">6 WCF error codes</div>
+    </div>
+    <div class="step-body">
+      <div id="docTableWrap" hidden>
+        <span class="section-label">Documents (select one to view)</span>
+        <div class="doc-table" id="docTable"></div>
+        <div class="out-actions" style="justify-content:flex-start;margin:-6px 0 12px;">
+          <button class="btn btn-danger btn-sm" id="retryBtn" hidden>&#8635; Retry failed documents</button>
+        </div>
+      </div>
+      <span class="section-label" id="curDocLabel">Your text with coded errors underlined</span>
+      <div class="annotated-output" id="annotatedOutput">
+        <span class="muted-note">Waiting for analysis&#8230;</span>
+      </div>
+      <div class="out-actions">
+        <button class="btn btn-secondary btn-sm" id="copyAnnotatedBtn">&#128203; Copy Feedback</button>
+        <button class="btn btn-secondary btn-sm" id="copyRichBtn">&#128203; Copy annotated text</button>
+        <button class="btn btn-success btn-sm" id="docBtn">&#11015; Download this document (.docx)</button>
+      </div>
+      <div class="dl-fallback" hidden>Download did not start? <a class="dl-link" target="_blank" rel="noopener">Click here</a></div>
+      <div class="stat-row" id="statRow">
+        <div class="stat-card"><span class="stat-num" id="statSent">0</span><span class="stat-lbl">Sentences</span></div>
+        <div class="stat-card"><span class="stat-num" id="statErr">0</span><span class="stat-lbl">Errors found</span></div>
+        <div class="stat-card"><span class="stat-num" id="statClean">0</span><span class="stat-lbl">Error-free</span></div>
+      </div>
+      <div class="legend">
+        <span class="legend-item">N &middot; Noun Endings</span>
+        <span class="legend-item">VF &middot; Verb Form</span>
+        <span class="legend-item">VT &middot; Verb Tense</span>
+        <span class="legend-item">SVA &middot; Subject-Verb Agreement</span>
+        <span class="legend-item">RO &middot; Run-on / Comma Splice</span>
+        <span class="legend-item">ART &middot; Articles</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="step locked" id="step3">
+    <div class="step-header">
+      <div class="step-num">3</div>
+      <div class="step-title">Write Your Revised Version</div>
+      <div class="step-meta">Paste allowed</div>
+    </div>
+    <div class="step-body">
+      <div class="rev-doc" id="revDocWrap" hidden>
+        <label for="revDocSel">Document:</label>
+        <select id="revDocSel"></select>
+      </div>
+      <div class="info-bar">
+        <div class="dot-pulse"></div>
+        Paste your original text here with corrections applied
+      </div>
+      <textarea id="editedText" placeholder="Rewrite your text here, applying corrections based on the feedback codes above&#8230;" spellcheck="false" autocorrect="off" autocapitalize="off" autocomplete="off" style="min-height:180px;"></textarea>
+      <div class="textarea-footer">
+        <span class="word-count" id="wordCount2">0 words</span>
+        <button class="btn btn-secondary btn-sm" id="copyRevisedBtn">&#128203; Copy</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="step locked" id="step4">
+    <div class="step-header">
+      <div class="step-num">4</div>
+      <div class="step-title">Export Report</div>
+      <div class="step-meta" id="step4Meta">.docx file</div>
+    </div>
+    <div class="step-body">
+      <span class="section-label">Preview (plain text)</span>
+      <div class="export-preview" id="exportPreview">Waiting for analysis to complete&#8230;</div>
+      <div class="action-row" style="margin-top:14px;">
+        <button class="btn btn-success" id="exportBtn">&#11015; Export as .docx</button>
+        <button class="btn btn-primary" id="emailBtn">&#9993; Send to Instructor</button>
+        <span class="spacer"></span>
+        <button class="btn btn-danger" id="startOverBtn">&#8635; Start Over</button>
+      </div>
+      <div class="dl-fallback" hidden>Download did not start? <a class="dl-link" target="_blank" rel="noopener">Click here</a></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- DEPLOYMENT CONFIG (optional).
+     To preset the AI for your own deployment, edit the JSON below. Example for a proxy:
+       {"provider":"custom","baseUrl":"https://your-proxy.example.com/v1","model":"your-model","apiKey":"","lockSettings":true}
+     provider: builtin | anthropic | openai | gemini | custom
+     lockSettings: true hides the settings screen and always uses this configuration.
+     Warning: a key placed here is visible to every visitor. Prefer a proxy that keeps the key on the server. -->
+<script type="application/json" id="deploy-config">{"provider":"","apiKey":"","model":"","baseUrl":"","lockSettings":false}</script>
+
+<script>
+(function () {
+  var docs = [];
+  var cur = -1;
+  var docSeq = 0;
+  var busy = false;
+  var lastUrl = null;
+  var HISTORY_KEY = 'linguacheck_history';
+  var MAX_HISTORY = 20;
+  var AI_KEY = 'linguacheck_ai_config';
+  var CHUNK_WORDS = 800;
+  var CONCURRENCY = 2;
+  var REQUEST_TIMEOUT = 120000;
+  var _saveTimer = null;
+  var NL = String.fromCharCode(10);
+  var COMB = String.fromCharCode(818);
+  var W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+  var XMLNS = 'http://www.w3.org/XML/1998/namespace';
+  var DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+  var CODES = ['N', 'VF', 'VT', 'SVA', 'RO', 'ART'];
+  var LABELS = {
+    N: 'Noun Endings', VF: 'Verb Form', VT: 'Verb Tense',
+    SVA: 'Subject-Verb Agreement', RO: 'Run-on / Comma Splice', ART: 'Articles'
+  };
+  var COLORS = {
+    N: '#8e44ad', VF: '#d35400', VT: '#16a085',
+    SVA: '#c0392b', RO: '#c47a10', ART: '#1a6fa8'
+  };
+  var STATUS_LABEL = { queued: 'Waiting', pending: 'Analyzing...', done: 'Done', failed: 'Failed' };
+  var RPR_ORDER = ['rStyle','rFonts','b','bCs','i','iCs','caps','smallCaps','strike','dstrike','outline','shadow','emboss','imprint','noProof','snapToGrid','vanish','webHidden','color','spacing','w','kern','position','sz','szCs','highlight','u','effect','bdr','shd','fitText','vertAlign','rtl','cs','em','lang','eastAsianLayout','specVanish','oMath','rPrChange'];
+
+  /* ---------- AI provider settings ---------- */
+  var PROVIDERS = ['builtin', 'anthropic', 'openai', 'gemini', 'custom'];
+  var PROVIDER_NAME = { builtin: 'Claude.ai', anthropic: 'Anthropic', openai: 'OpenAI', gemini: 'Gemini', custom: 'Custom' };
+  var AI_DEFAULTS = {
+    anthropic: {
+      model: 'claude-sonnet-5-5',
+      models: ['claude-sonnet-5-5', 'claude-haiku-5-5', 'claude-opus-5-5', 'claude-sonnet-4-6'],
+      urlPlaceholder: 'https://api.anthropic.com/v1/messages',
+      urlNote: 'Optional. Full endpoint URL, for example your own proxy. Leave empty to use Anthropic directly.'
+    },
+    openai: {
+      model: 'gpt-4o-mini',
+      models: ['gpt-4o-mini', 'gpt-4o', 'gpt-4.1-mini', 'gpt-4.1'],
+      urlPlaceholder: 'https://api.openai.com/v1',
+      urlNote: 'Optional. Base URL ending in /v1. Leave empty to use OpenAI directly.'
+    },
+    gemini: {
+      model: 'gemini-2.5-flash',
+      models: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash'],
+      urlPlaceholder: 'https://generativelanguage.googleapis.com/v1beta',
+      urlNote: 'Optional. Leave empty to use Google directly.'
+    },
+    custom: {
+      model: '',
+      models: [],
+      urlPlaceholder: 'https://openrouter.ai/api/v1',
+      urlNote: 'Required. Any OpenAI-compatible base URL: OpenRouter, Groq, Mistral, DeepSeek, Ollama (http://localhost:11434/v1), LM Studio, or your own proxy.'
+    }
+  };
+  var aiState = { provider: 'builtin', remember: false, profiles: {} };
+  var memAI = '';
+  var DEPLOY = {};
+  var settingsLocked = false;
+
+  var SYSTEM_PROMPT = [
+    'You are an expert linguistic annotator specializing in second language written corrective feedback.',
+    'Task: Analyze the provided learner text. Identify all errors related to the six target forms listed below.',
+    'The text may contain several paragraphs separated by line breaks. Analyze every sentence in order and do not skip or merge sentences.',
+    'For each error, provide only the corresponding error code.',
+    'Do not correct the error, rewrite the sentence, or suggest the correct form.',
+    'Do not invent or comment on any error outside the target forms.',
+    '',
+    'Critical Accuracy Requirement (Hallucination-Free):',
+    '* If you are not 100% certain that a specific error matches one of the six categories, do not mark it.',
+    '* Do not add codes for prepositions, vocabulary, spelling, punctuation, or capitalization.',
+    '',
+    'Target Forms & Codes:',
+    'N   - Noun endings: missing/extra plural -s, uncountable nouns treated as countable (information, research, advice), missing possessive \'s. e.g., a lot of informations, peoples lives, two book',
+    'VF  - Verb form: wrong form after a modal, to, a preposition, be, or have. e.g., can believes, without check, was gave',
+    'VT  - Verb tense: tense does not fit the time, or shifts without reason. e.g., Yesterday, the students write an essay',
+    'SVA - Subject-verb agreement: verb does not agree with its subject (missing -s after it/which/that/long subjects). e.g., it make people confused',
+    'RO  - Run-on / comma splice: two sentences joined by only a comma or nothing. e.g., Rumors spread quickly, people share them',
+    'ART - Articles: missing, extra, or wrong a/an/the; missing "of" after "a lot". e.g., is big problem, a lot people',
+    '',
+    'Which words to mark:',
+    '* Mark the exact erroneous word or phrase exactly as it appears in the sentence.',
+    '* For an omission (for example a missing article), mark the word that is next to the gap.',
+    '* For RO, mark the words around the splice point (the last word of the first clause, the comma if any, and the first word of the second clause).',
+    '',
+    'Output Format Rules:',
+    '1. For each sentence write the original sentence on one line.',
+    '2. Directly below it, write each error using EXACTLY this format: __errorword__ (CODE)',
+    '3. One error per line, indented below the sentence.',
+    '4. If a sentence has no errors among the six target forms, write [No target errors] below it.',
+    '5. Separate each sentence block with a blank line.',
+    '6. Do not add any explanation, feedback, praise, or correction.',
+    '',
+    'Example:',
+    'Input: Yesterday, the students write an essay. It make people confused. Rumors spread quickly, people share them. She has big problem.',
+    'Output:',
+    'Yesterday, the students write an essay.',
+    '__write__ (VT)',
+    '',
+    'It make people confused.',
+    '__make__ (SVA)',
+    '',
+    'Rumors spread quickly, people share them.',
+    '__quickly, people__ (RO)',
+    '',
+    'She has big problem.',
+    '__big problem__ (ART)'
+  ].join(NL);
+
+  /* ---------- small helpers ---------- */
+  function $(id) { return document.getElementById(id); }
+
+  function showToast(msg, dur) {
+    dur = dur || 2800;
+    var t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._t);
+    t._t = setTimeout(function () { t.classList.remove('show'); }, dur);
+  }
+
+  function unlock(id) { $(id).classList.remove('locked'); }
+  function setActive(id) { $(id).classList.add('active'); }
+  function setDone(id) {
+    var el = $(id);
+    el.classList.remove('active');
+    el.classList.add('done');
+  }
+
+  function escapeHTML(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+  function identity(s) { return s; }
+  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+  function countWords(s) { return s.trim() === '' ? 0 : s.trim().split(/\s+/).length; }
+  function countSents(s) {
+    if (!s.trim()) return 0;
+    var m = s.match(/[^.!?]*[.!?]+/g);
+    return m ? m.length : 1;
+  }
+  function hexOf(code) { return COLORS[code].slice(1); }
+  function today() { return new Date().toISOString().slice(0, 10); }
+  function safeName(s) { return String(s).replace(/[\\\/:*?"<>|]/g, '_').trim() || 'document'; }
+
+  function updateCounts() {
+    var v = $('studentText').value;
+    var w = countWords(v);
+    var s = countSents(v);
+    $('wordCount').textContent =
+      w + ' word' + (w !== 1 ? 's' : '') + ' \u00b7 ' + s + ' sentence' + (s !== 1 ? 's' : '');
+  }
+
+  function doneDocs() { return docs.filter(function (d) { return d.status === 'done'; }); }
+  function findDoc(id) {
+    var i;
+    for (i = 0; i < docs.length; i++) { if (docs[i].id === id) { return docs[i]; } }
+    return null;
+  }
+  function newDoc(id, name, kind, text, docx) {
+    return {
+      id: id, name: name, kind: kind,
+      base: kind === 'typed' ? 'Typed text' : name.replace(/\.[^.]+$/, ''),
+      text: text, docx: docx, lines: [], chunks: null, paras: [], raw: '',
+      stats: null, status: 'queued', error: '', setupHint: false, revised: ''
+    };
+  }
+  function statusText(d) {
+    if (d.status === 'pending' && d.chunks && d.chunks.length) {
+      var n = d.chunks.filter(function (c) { return c.status === 'done'; }).length;
+      return 'Analyzing ' + n + '/' + d.chunks.length;
+    }
+    return STATUS_LABEL[d.status];
+  }
+
+  /* ---------- AI configuration (storage, form, badge) ---------- */
+  function loadAIState() {
+    var raw = null;
+    var st = null;
+    try { raw = window.localStorage.getItem(AI_KEY); } catch (e) { raw = null; }
+    if (!raw) { try { raw = window.sessionStorage.getItem(AI_KEY); } catch (e2) { raw = null; } }
+    if (!raw && memAI) { raw = memAI; }
+    if (raw) { try { st = JSON.parse(raw); } catch (e3) { st = null; } }
+    if (st && typeof st === 'object' && PROVIDERS.indexOf(st.provider) !== -1 && st.profiles) { aiState = st; }
+    else { st = null; }
+
+    try { DEPLOY = JSON.parse($('deploy-config').textContent || '{}') || {}; } catch (e4) { DEPLOY = {}; }
+    if (DEPLOY.provider && PROVIDERS.indexOf(DEPLOY.provider) !== -1) {
+      if (DEPLOY.lockSettings === true || !st) {
+        aiState = { provider: DEPLOY.provider, remember: false, profiles: {} };
+        if (DEPLOY.provider !== 'builtin') {
+          aiState.profiles[DEPLOY.provider] = {
+            apiKey: DEPLOY.apiKey || '', model: DEPLOY.model || '', baseUrl: DEPLOY.baseUrl || ''
+          };
+        }
+      }
+    }
+    settingsLocked = (DEPLOY.lockSettings === true);
+  }
+
+  function persistAI() {
+    var s = JSON.stringify(aiState);
+    memAI = s;
+    try {
+      if (aiState.remember) {
+        window.localStorage.setItem(AI_KEY, s);
+        try { window.sessionStorage.removeItem(AI_KEY); } catch (e1) {}
+      } else {
+        window.sessionStorage.setItem(AI_KEY, s);
+        try { window.localStorage.removeItem(AI_KEY); } catch (e2) {}
+      }
+    } catch (e) { /* kept in memory only */ }
+  }
+
+  function activeConfig() {
+    var p = aiState.provider;
+    var pr = aiState.profiles[p] || {};
+    var d = AI_DEFAULTS[p] || {};
+    return { provider: p, apiKey: pr.apiKey || '', model: pr.model || d.model || '', baseUrl: pr.baseUrl || '' };
+  }
+
+  function validateConfig(cfg) {
+    if (cfg.provider === 'builtin') { return ''; }
+    if (cfg.baseUrl && !/^https?:\/\//i.test(cfg.baseUrl)) { return 'The Base URL must start with http:// or https://.'; }
+    if (cfg.provider === 'custom' && !cfg.baseUrl) { return 'Please enter the Base URL of your endpoint.'; }
+    if (cfg.provider !== 'custom' && !cfg.apiKey && !cfg.baseUrl) { return 'Please enter your API key.'; }
+    if (!cfg.model) { return 'Please enter a model name.'; }
+    return '';
+  }
+
+  function renderAIBadge() {
+    var cfg = activeConfig();
+    var b = $('aiBadge');
+    var txt;
+    var warn = false;
+    if (cfg.provider === 'builtin') {
+      txt = '\u2726 AI: Claude.ai built-in';
+    } else if (validateConfig(cfg)) {
+      txt = '\u26a0 AI: set-up needed';
+      warn = true;
+    } else {
+      txt = '\u2726 AI: ' + PROVIDER_NAME[cfg.provider] + ' \u00b7 ' + cfg.model;
+    }
+    b.textContent = txt;
+    b.title = settingsLocked ? 'AI settings are locked by the site owner' : 'Open AI settings';
+    if (warn) { b.classList.add('warn'); } else { b.classList.remove('warn'); }
+    b.disabled = settingsLocked;
+  }
+
+  function setAIStatus(msg, kind) {
+    var el = $('aiStatus');
+    el.textContent = msg || '';
+    el.className = 'set-status' + (kind ? ' ' + kind : '');
+  }
+
+  function fillSettingsForm(p) {
+    var pr = aiState.profiles[p] || {};
+    var d = AI_DEFAULTS[p] || null;
+    var isBuiltin = (p === 'builtin');
+    $('aiProvider').value = p;
+    $('aiBuiltinNote').hidden = !isBuiltin;
+    $('aiKeyWrap').hidden = isBuiltin;
+    $('aiModelWrap').hidden = isBuiltin;
+    $('aiUrlWrap').hidden = isBuiltin;
+    $('aiRememberWrap').hidden = isBuiltin;
+    $('aiWarn').hidden = isBuiltin;
+    $('aiClearKey').hidden = isBuiltin;
+    if (isBuiltin) { return; }
+    $('aiKey').value = pr.apiKey || '';
+    $('aiKey').type = 'password';
+    $('aiShow').textContent = 'Show';
+    $('aiKeyLabel').textContent = (p === 'custom') ? 'API key (optional)' : 'API key';
+    $('aiModel').value = pr.model || d.model || '';
+    $('aiUrl').value = pr.baseUrl || '';
+    $('aiUrl').placeholder = d.urlPlaceholder;
+    $('aiUrlNote').textContent = d.urlNote;
+    $('aiRemember').checked = !!aiState.remember;
+    var list = $('aiModelList');
+    list.innerHTML = '';
+    d.models.forEach(function (m) {
+      var o = document.createElement('option');
+      o.value = m;
+      list.appendChild(o);
+    });
+  }
+
+  function readSettingsForm() {
+    var p = $('aiProvider').value;
+    if (p === 'builtin') { return { provider: p, apiKey: '', model: '', baseUrl: '' }; }
+    return {
+      provider: p, apiKey: $('aiKey').value.trim(),
+      model: $('aiModel').value.trim(), baseUrl: $('aiUrl').value.trim()
+    };
+  }
+
+  function openSettings(hint) {
+    if (settingsLocked) {
+      showToast('The AI settings are locked by the site owner.', 4000);
+      return;
+    }
+    fillSettingsForm(aiState.provider);
+    var h = $('aiHint');
+    h.textContent = hint || '';
+    h.hidden = !hint;
+    setAIStatus('', '');
+    $('aiModal').classList.add('open');
+    $('aiProvider').focus();
+  }
+  function closeAIModal() { $('aiModal').classList.remove('open'); }
+
+  function describeError(e) {
+    var m = (e && e.message) ? e.message : 'Unknown error';
+    if (e && e.auth) { m += ' Check your API key.'; }
+    else if (e && e.status === 404) { m += ' Check the model name and the Base URL.'; }
+    else if (e && e.status === 429) { m += ' (rate limit or quota reached)'; }
+    return m;
+  }
+
+  $('aiBadge').addEventListener('click', function () { openSettings(''); });
+  $('aiClose').addEventListener('click', closeAIModal);
+  $('aiModal').addEventListener('click', function (e) { if (e.target === this) { closeAIModal(); } });
+  $('aiProvider').addEventListener('change', function () { fillSettingsForm(this.value); setAIStatus('', ''); });
+  $('aiShow').addEventListener('click', function () {
+    var k = $('aiKey');
+    if (k.type === 'password') { k.type = 'text'; this.textContent = 'Hide'; }
+    else { k.type = 'password'; this.textContent = 'Show'; }
+  });
+
+  $('aiTest').addEventListener('click', function () {
+    var f = readSettingsForm();
+    var err = validateConfig(f);
+    if (err) { setAIStatus(err, 'err'); return; }
+    var btn = $('aiTest');
+    btn.disabled = true;
+    setAIStatus('Testing the connection\u2026', '');
+    callAI(f, 'You are a connection test. Reply with the single word OK.', 'ping', 30000).then(function (out) {
+      setAIStatus('Connected. The AI replied: "' + String(out).trim().slice(0, 40) + '"', 'ok');
+    }).catch(function (e) {
+      setAIStatus(describeError(e), 'err');
+    }).then(function () { btn.disabled = false; });
+  });
+
+  $('aiSave').addEventListener('click', function () {
+    var f = readSettingsForm();
+    var err = validateConfig(f);
+    if (err) { setAIStatus(err, 'err'); return; }
+    aiState.provider = f.provider;
+    if (f.provider !== 'builtin') {
+      aiState.remember = $('aiRemember').checked;
+      aiState.profiles[f.provider] = { apiKey: f.apiKey, model: f.model, baseUrl: f.baseUrl };
+    }
+    persistAI();
+    renderAIBadge();
+    closeAIModal();
+    showToast('AI settings saved.');
+  });
+
+  $('aiClearKey').addEventListener('click', function () {
+    var p = $('aiProvider').value;
+    if (p === 'builtin') { return; }
+    var pr = aiState.profiles[p] || {};
+    pr.apiKey = '';
+    aiState.profiles[p] = pr;
+    persistAI();
+    $('aiKey').value = '';
+    renderAIBadge();
+    setAIStatus('The saved key was removed from this browser.', 'ok');
+  });
+
+  /* ---------- AI calls (one function per provider format) ---------- */
+  function normalizeError(e) {
+    if (e && (e.status !== undefined || e.retryable || e.network || e.timeout || e.config)) { return e; }
+    var err;
+    if (e && e.name === 'AbortError') {
+      err = new Error('The request timed out.');
+      err.timeout = true;
+    } else {
+      err = new Error('Could not reach the AI service (network or CORS error). Check your internet connection and the Base URL. Some providers block browser requests; use a proxy in that case.');
+      err.network = true;
+    }
+    return err;
+  }
+
+  function aiFetch(url, headers, body, timeoutMs) {
+    var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    var timer = null;
+    if (ctrl) { timer = setTimeout(function () { ctrl.abort(); }, timeoutMs); }
+    var opts = { method: 'POST', headers: headers, body: JSON.stringify(body) };
+    if (ctrl) { opts.signal = ctrl.signal; }
+    return fetch(url, opts).then(function (response) {
+      return response.text().then(function (txt) {
+        clearTimeout(timer);
+        var data = null;
+        try { data = JSON.parse(txt); } catch (e0) { data = null; }
+        if (!response.ok) {
+          var msg = '';
+          if (data && data.error) { msg = (typeof data.error === 'string') ? data.error : (data.error.message || ''); }
+          if (!msg && data && data.message) { msg = data.message; }
+          if (!msg) { msg = 'HTTP ' + response.status; }
+          var err = new Error(msg);
+          err.status = response.status;
+          err.auth = (response.status === 401 || response.status === 403);
+          var ra = parseFloat(response.headers.get('retry-after'));
+          if (!isNaN(ra)) { err.retryAfter = ra; }
+          throw err;
+        }
+        if (data === null) {
+          var e2 = new Error('The AI service returned an unreadable reply.');
+          e2.retryable = true;
+          throw e2;
+        }
+        return data;
+      });
+    }).catch(function (e) {
+      clearTimeout(timer);
+      throw normalizeError(e);
+    });
+  }
+
+  function cfgError(msg) {
+    var e = new Error(msg);
+    e.config = true;
+    return Promise.reject(e);
+  }
+
+  function partsText(content) {
+    if (typeof content === 'string') { return content; }
+    if (Array.isArray(content)) {
+      return content.map(function (c) { return (c && c.text) ? c.text : ''; }).join('');
+    }
+    return '';
+  }
+
+  function callAI(cfg, system, text, timeoutMs) {
+    timeoutMs = timeoutMs || REQUEST_TIMEOUT;
+    var p = cfg.provider;
+    var url, headers, body;
+
+    if (p === 'builtin' || p === 'anthropic') {
+      if (p === 'anthropic' && !cfg.model) { return cfgError('Please choose a model in the AI settings.'); }
+      url = (p === 'anthropic' && cfg.baseUrl) ? cfg.baseUrl : 'https://api.anthropic.com/v1/messages';
+      headers = { 'Content-Type': 'application/json', 'anthropic-dangerous-direct-browser-access': 'true' };
+      if (p === 'anthropic') {
+        if (cfg.apiKey) { headers['x-api-key'] = cfg.apiKey; }
+        headers['anthropic-version'] = '2023-06-01';
+      }
+      body = {
+        model: (p === 'builtin') ? 'claude-sonnet-4-6' : cfg.model,
+        max_tokens: 4096,
+        system: system,
+        messages: [{ role: 'user', content: text }]
+      };
+      return aiFetch(url, headers, body, timeoutMs).then(function (data) {
+        return (data.content || []).map(function (b) { return b.text || ''; }).join('');
+      });
+    }
+
+    if (!cfg.model) { return cfgError('Please choose a model in the AI settings.'); }
+
+    if (p === 'gemini') {
+      var gbase = (cfg.baseUrl || 'https://generativelanguage.googleapis.com/v1beta').replace(/\/+$/, '');
+      url = gbase + '/models/' + encodeURIComponent(cfg.model) + ':generateContent';
+      if (cfg.apiKey) { url += '?key=' + encodeURIComponent(cfg.apiKey); }
+      headers = { 'Content-Type': 'application/json' };
+      body = {
+        systemInstruction: { parts: [{ text: system }] },
+        contents: [{ role: 'user', parts: [{ text: text }] }],
+        generationConfig: { temperature: 0 }
+      };
+      return aiFetch(url, headers, body, timeoutMs).then(function (data) {
+        var cand = data.candidates && data.candidates[0];
+        var parts = cand && cand.content && cand.content.parts;
+        return Array.isArray(parts) ? parts.map(function (x) { return x.text || ''; }).join('') : '';
+      });
+    }
+
+    /* openai and custom: OpenAI-compatible chat completions */
+    var base = (cfg.baseUrl || (p === 'openai' ? 'https://api.openai.com/v1' : '')).replace(/\/+$/, '');
+    if (!base) { return cfgError('Please enter the Base URL in the AI settings.'); }
+    url = /\/chat\/completions$/.test(base) ? base : base + '/chat/completions';
+    headers = { 'Content-Type': 'application/json' };
+    if (cfg.apiKey) { headers['Authorization'] = 'Bearer ' + cfg.apiKey; }
+    body = {
+      model: cfg.model,
+      messages: [{ role: 'system', content: system }, { role: 'user', content: text }]
+    };
+    return aiFetch(url, headers, body, timeoutMs).then(function (data) {
+      var ch = data.choices && data.choices[0];
+      return ch && ch.message ? partsText(ch.message.content) : '';
+    });
+  }
+
+  function isRetryable(e) {
+    return !!(e.retryable || e.network || e.timeout || e.status === 408 || e.status === 409 || e.status === 429 || e.status >= 500);
+  }
+
+  function callWithRetry(cfg, text) {
+    var delays = [2000, 5000, 10000, 20000];
+    var attempt = 0;
+    function once() {
+      return callAI(cfg, SYSTEM_PROMPT, text, REQUEST_TIMEOUT).then(function (out) {
+        if (!out || !out.trim()) {
+          var e = new Error('The AI returned an empty reply.');
+          e.retryable = true;
+          throw e;
+        }
+        return out;
+      }).catch(function (e) {
+        if (!isRetryable(e)) { throw e; }
+        var max = e.network ? 2 : delays.length;
+        if (attempt >= max) { throw e; }
+        var wait = delays[attempt];
+        attempt++;
+        if (e.retryAfter) { wait = Math.max(wait, Math.min(e.retryAfter * 1000, 30000)); }
+        return sleep(wait).then(once);
+      });
+    }
+    return once();
+  }
+
+  function ensureAIReady() {
+    var err = validateConfig(activeConfig());
+    if (err) {
+      openSettings('Before analyzing, set up the AI: ' + err);
+      return false;
+    }
+    return true;
+  }
+
+  /* ---------- annotation model (marks are offsets inside each paragraph) ---------- */
+  function isAlnum(ch) { return !!ch && /[A-Za-z0-9\u00C0-\u024F]/.test(ch); }
+
+  function overlapsAny(list, s, e) {
+    var i;
+    for (i = 0; i < list.length; i++) { if (list[i].start < e && s < list[i].end) { return true; } }
+    return false;
+  }
+
+  function findOccurrence(text, needle, rs, re, taken) {
+    var variants = [[text, needle], [text.toLowerCase(), needle.toLowerCase()]];
+    var v, H, N, idx, end, guard;
+    for (v = 0; v < variants.length; v++) {
+      H = variants[v][0];
+      N = variants[v][1];
+      idx = H.indexOf(N, rs);
+      guard = 0;
+      while (idx !== -1 && guard < 500) {
+        guard++;
+        end = idx + N.length;
+        if (end > re) { break; }
+        var okL = !isAlnum(N.charAt(0)) || !isAlnum(H.charAt(idx - 1));
+        var okR = !isAlnum(N.charAt(N.length - 1)) || !isAlnum(H.charAt(end));
+        if (okL && okR && !overlapsAny(taken, idx, end)) { return idx; }
+        idx = H.indexOf(N, idx + 1);
+      }
+    }
+    return -1;
+  }
+
+  function locateSentence(text, sentence, cursor) {
+    var idx = text.indexOf(sentence, cursor);
+    if (idx !== -1) { return { s: idx, e: idx + sentence.length }; }
+    var tokens = sentence.trim().split(/\s+/).map(function (t) { return t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); });
+    if (!tokens.length || !tokens[0]) { return null; }
+    var m = new RegExp(tokens.join('\\s+')).exec(text.slice(cursor));
+    if (m) { return { s: cursor + m.index, e: cursor + m.index + m[0].length }; }
+    return null;
+  }
+
+  function computeMarks(text, blocks) {
+    var marks = [];
+    var missed = [];
+    var placed = [];
+    var cursor = 0;
+    blocks.forEach(function (b) {
+      var loc = locateSentence(text, b.sentence, cursor);
+      var rs, re;
+      if (loc) { rs = loc.s; re = loc.e; cursor = loc.e; }
+      else { rs = cursor; re = text.length; }
+      placed.push({ b: b, pos: rs });
+      var seen = {};
+      b.errors.forEach(function (err) {
+        var k = err.word + '|' + err.code;
+        if (seen[k]) { return; }
+        seen[k] = true;
+        var idx = findOccurrence(text, err.word, rs, re, marks);
+        if (idx === -1) { missed.push({ word: err.word, code: err.code, pos: rs }); return; }
+        marks.push({ start: idx, end: idx + err.word.length, code: err.code });
+      });
+    });
+    marks.sort(function (a, b) { return a.start - b.start; });
+    return { marks: marks, missed: missed, placed: placed };
+  }
+
+  function parseBlocks(raw) {
+    var out = [];
+    raw.trim().split(/\n\s*\n/).forEach(function (block) {
+      var lines = block.split(/\r?\n/).map(function (l) { return l.trim(); }).filter(function (l) { return l; });
+      if (!lines.length) { return; }
+      var b = { sentence: lines[0], errors: [], clean: false };
+      lines.slice(1).forEach(function (line) {
+        if (line.indexOf('[No target errors]') === 0) { b.clean = true; return; }
+        var m = line.match(/__(.+?)__\s*\(([A-Za-z]+)\)/);
+        if (m) {
+          var code = m[2].toUpperCase();
+          var word = m[1].trim();
+          if (word && CODES.indexOf(code) !== -1) { b.errors.push({ word: word, code: code }); }
+        }
+      });
+      out.push(b);
+    });
+    return out;
+  }
+
+  function docStats(d) {
+    var sentences = 0, errors = 0, clean = 0;
+    d.paras.forEach(function (p) {
+      sentences += p.blocks.length;
+      errors += p.marks.length;
+      p.blocks.forEach(function (b) { if (b.errors.length === 0) { clean++; } });
+    });
+    return { sentences: sentences, errors: errors, clean: clean };
+  }
+
+  /* ---------- chunks: a document is sent to the AI in a few large parts ---------- */
+  function buildChunks(lines) {
+    var chunks = [];
+    var c = null;
+    lines.forEach(function (ln, i) {
+      var wc = countWords(ln);
+      if (!c || (c.words > 0 && c.words + wc > CHUNK_WORDS)) {
+        c = { lines: [], words: 0, status: 'todo', raw: '', error: '', needsSetup: false };
+        chunks.push(c);
+      }
+      c.lines.push(i);
+      c.words += wc;
+    });
+    chunks.forEach(function (ch) {
+      var pos = 0;
+      var parts = [];
+      ch.offsets = [];
+      ch.lines.forEach(function (li) {
+        var ln = lines[li];
+        ch.offsets.push({ line: li, start: pos, end: pos + ln.length });
+        parts.push(ln);
+        pos += ln.length + 1;
+      });
+      ch.text = parts.join(NL);
+      ch.hasLetters = /[A-Za-z\u00C0-\u024F]/.test(ch.text);
+    });
+    return chunks;
+  }
+
+  function distributeChunk(d, ch) {
+    var blocks = parseBlocks(ch.raw);
+    var cm = computeMarks(ch.text, blocks);
+    function lineAt(pos) {
+      var i;
+      for (i = 0; i < ch.offsets.length; i++) { if (pos <= ch.offsets[i].end) { return ch.offsets[i]; } }
+      return ch.offsets[ch.offsets.length - 1];
+    }
+    cm.marks.forEach(function (m) {
+      var i, o, ok = false;
+      for (i = 0; i < ch.offsets.length; i++) {
+        o = ch.offsets[i];
+        if (o.start <= m.start && m.end <= o.end) {
+          d.paras[o.line].marks.push({ start: m.start - o.start, end: m.end - o.start, code: m.code });
+          ok = true;
+          break;
+        }
+      }
+      if (!ok) { d.paras[lineAt(m.start).line].missed.push({ word: ch.text.slice(m.start, m.end), code: m.code }); }
+    });
+    cm.placed.forEach(function (pl) { d.paras[lineAt(pl.pos).line].blocks.push(pl.b); });
+    cm.missed.forEach(function (x) { d.paras[lineAt(x.pos).line].missed.push({ word: x.word, code: x.code }); });
+  }
+
+  function finalizeDoc(d) {
+    var failedChunks = d.chunks.filter(function (c) { return c.status === 'failed'; });
+    if (failedChunks.length) {
+      d.status = 'failed';
+      d.error = failedChunks[0].error + (d.chunks.length > 1 ? ' (' + failedChunks.length + ' of ' + d.chunks.length + ' parts failed)' : '');
+      d.setupHint = failedChunks.some(function (c) { return c.needsSetup; });
+      return;
+    }
+    d.paras = d.lines.map(function (ln) { return { text: ln, blocks: [], marks: [], missed: [] }; });
+    d.chunks.forEach(function (ch) { if (ch.raw) { distributeChunk(d, ch); } });
+    d.paras.forEach(function (p) { p.marks.sort(function (a, b) { return a.start - b.start; }); });
+    d.raw = d.chunks.map(function (c) { return (c.raw || '').trim(); }).filter(function (x) { return x; }).join(NL + NL);
+    d.stats = docStats(d);
+    d.error = '';
+    d.setupHint = false;
+    d.status = 'done';
+  }
+
+  /* ---------- renderers (HTML / plain) ---------- */
+  function underlineChars(s) {
+    var out = '';
+    var i;
+    for (i = 0; i < s.length; i++) { out += s.charAt(i) + COMB; }
+    return out;
+  }
+
+  function renderMarked(text, marks, wrap, enc) {
+    var out = '';
+    var pos = 0;
+    marks.forEach(function (m) {
+      out += enc(text.slice(pos, m.start)) + wrap(enc(text.slice(m.start, m.end)), m.code);
+      pos = m.end;
+    });
+    return out + enc(text.slice(pos));
+  }
+
+  function screenWrap(w, code) {
+    return '<span class="err-word ec-' + code + '">' + w +
+      '<span class="err-badge ec-' + code + '">' + code + '</span></span>';
+  }
+  function docWrap(w, code) {
+    return '<span style="color:' + COLORS[code] + ';"><u>' + w + '</u> <b>[' + code + ']</b></span>';
+  }
+  function plainWrap(w, code) {
+    return underlineChars(w) + ' [' + code + ']';
+  }
+
+  function annotatedPlain(d) {
+    return d.paras.map(function (p) { return renderMarked(p.text, p.marks, plainWrap, identity); }).join(NL);
+  }
+
+  function renderDocOutput(d) {
+    var c = $('annotatedOutput');
+    var statRow = $('statRow');
+    c.innerHTML = '';
+    if (!d || d.status !== 'done') {
+      var m = document.createElement('span');
+      m.className = 'muted-note';
+      if (d && d.status === 'failed') { m.textContent = 'This document could not be analyzed: ' + d.error; }
+      else { m.textContent = 'Waiting for analysis\u2026'; }
+      c.appendChild(m);
+      statRow.style.display = 'none';
+      return;
+    }
+    var missed = [];
+    d.paras.forEach(function (p) {
+      var line = document.createElement('div');
+      line.className = 'para-line';
+      if (!p.text.trim()) { line.innerHTML = '&nbsp;'; }
+      else { line.innerHTML = renderMarked(p.text, p.marks, screenWrap, escapeHTML); }
+      c.appendChild(line);
+      p.missed.forEach(function (x) { missed.push(x.word + ' (' + x.code + ')'); });
+    });
+    if (missed.length) {
+      var n = document.createElement('div');
+      n.className = 'missed-note';
+      n.textContent = 'Could not locate in the text: ' + missed.join(', ');
+      c.appendChild(n);
+    }
+    statRow.style.display = 'flex';
+    $('statSent').textContent = d.stats.sentences;
+    $('statErr').textContent = d.stats.errors;
+    $('statClean').textContent = d.stats.clean;
+  }
+
+  /* ---------- report text (plain preview and email) ---------- */
+  function buildReportText(d) {
+    var sep = '';
+    var thin = '';
+    var i;
+    for (i = 0; i < 52; i++) { sep += '\u2550'; thin += '\u2500'; }
+    return [
+      'LINGUACHECK \u2014 ANNOTATED REPORT',
+      sep,
+      'Document: ' + d.base,
+      'Generated: ' + new Date().toLocaleString(),
+      '',
+      'ANNOTATED TEXT (error underlined, code next to it)',
+      thin,
+      annotatedPlain(d),
+      '',
+      'REVISED VERSION',
+      thin,
+      (d.revised || '').trim() || '(not yet written)',
+      '',
+      sep,
+      'Error Codes: N \u00b7 VF \u00b7 VT \u00b7 SVA \u00b7 RO \u00b7 ART'
+    ].join(NL);
+  }
+
+  function updateExportPreview() {
+    var d = docs[cur];
+    var ready = doneDocs().length;
+    if (!d || d.status !== 'done') {
+      $('exportPreview').textContent = 'Waiting for analysis to complete\u2026';
+      return;
+    }
+    var head = ready > 1 ? ('The export will contain ' + ready + ' documents. Preview of the selected one:' + NL + NL) : '';
+    $('exportPreview').textContent = head + buildReportText(d);
+  }
+
+  function renderExportButton() {
+    var n = doneDocs().length;
+    $('exportBtn').innerHTML = n > 1 ? '&#11015; Export all (.zip)' : '&#11015; Export as .docx';
+    $('step4Meta').textContent = n > 1 ? '.zip of .docx files' : '.docx file';
+  }
+
+  /* ---------- queue and document lists ---------- */
+  function renderFileList() {
+    var files = docs.filter(function (d) { return d.kind === 'file'; });
+    var box = $('fileList');
+    box.innerHTML = '';
+    $('fileListWrap').hidden = !files.length;
+    $('queueCount').textContent = files.length + ' file' + (files.length !== 1 ? 's' : '') + ' in the list';
+    files.forEach(function (d) {
+      var row = document.createElement('div');
+      row.className = 'file-item';
+      var nm = document.createElement('span');
+      nm.className = 'file-name';
+      nm.textContent = d.name;
+      var meta = document.createElement('span');
+      meta.className = 'file-meta' + (d.status === 'failed' ? ' err' : '');
+      meta.textContent = countWords(d.text) + ' words \u00b7 ' + statusText(d) +
+        (d.status === 'failed' && d.error ? ' \u2014 ' + d.error : '');
+      if (d.error) { meta.title = d.error; }
+      var x = document.createElement('button');
+      x.className = 'file-x';
+      x.type = 'button';
+      x.textContent = '\u00d7';
+      x.setAttribute('aria-label', 'Remove ' + d.name);
+      x.addEventListener('click', function () { removeDoc(d.id); });
+      row.appendChild(nm);
+      row.appendChild(meta);
+      row.appendChild(x);
+      box.appendChild(row);
+    });
+  }
+
+  function renderDocTable() {
+    var failed = docs.some(function (d) { return d.status === 'failed'; });
+    $('docTableWrap').hidden = !(docs.length > 1 || failed);
+    $('retryBtn').hidden = !failed;
+    var box = $('docTable');
+    box.innerHTML = '';
+    docs.forEach(function (d, i) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'doc-row' + (i === cur ? ' sel' : '');
+      var nm = document.createElement('span');
+      nm.className = 'dn';
+      nm.textContent = d.name;
+      var meta = document.createElement('span');
+      meta.className = 'dm' + (d.status === 'failed' ? ' err' : '');
+      meta.textContent = statusText(d) + (d.status === 'done' ? ' \u00b7 ' + d.stats.errors + ' errors' : '');
+      if (d.error) { meta.title = d.error; }
+      b.appendChild(nm);
+      b.appendChild(meta);
+      b.addEventListener('click', function () { cur = i; showCurrent(); });
+      box.appendChild(b);
+    });
+  }
+
+  function renderRevSelect() {
+    var ready = [];
+    docs.forEach(function (d, i) { if (d.status === 'done') { ready.push(i); } });
+    var sel = $('revDocSel');
+    sel.innerHTML = '';
+    ready.forEach(function (i) {
+      var o = document.createElement('option');
+      o.value = String(i);
+      o.textContent = docs[i].name;
+      if (i === cur) { o.selected = true; }
+      sel.appendChild(o);
+    });
+    $('revDocWrap').hidden = ready.length < 2;
+  }
+
+  function showCurrent() {
+    var d = docs[cur];
+    $('curDocLabel').textContent = d ? 'Document: ' + d.name : 'Your text with coded errors underlined';
+    renderDocOutput(d);
+    var ta = $('editedText');
+    ta.value = (d && d.status === 'done') ? d.revised : '';
+    var w = countWords(ta.value);
+    $('wordCount2').textContent = w + ' word' + (w !== 1 ? 's' : '');
+    renderDocTable();
+    renderRevSelect();
+    renderExportButton();
+    updateExportPreview();
+  }
+
+  function lockSteps() {
+    ['step2', 'step3', 'step4'].forEach(function (id) {
+      var el = $(id);
+      el.classList.add('locked');
+      el.classList.remove('active', 'done');
+    });
+    $('step1').classList.remove('done');
+    $('step1').classList.add('active');
+  }
+
+  function refreshAfterChange() {
+    var ready = doneDocs();
+    if (!ready.length) {
+      cur = -1;
+      lockSteps();
+      showCurrent();
+    } else {
+      if (!docs[cur] || docs[cur].status !== 'done') { cur = docs.indexOf(ready[0]); }
+      showCurrent();
+    }
+    renderFileList();
+  }
+
+  function removeDoc(id) {
+    if (busy) { showToast('Please wait until the analysis has finished.'); return; }
+    var d = docs[cur];
+    var keepId = d ? d.id : null;
+    docs = docs.filter(function (x) { return x.id !== id; });
+    cur = -1;
+    if (keepId) {
+      var i;
+      for (i = 0; i < docs.length; i++) { if (docs[i].id === keepId) { cur = i; break; } }
+    }
+    refreshAfterChange();
+  }
+
+  /* ---------- DOCX: XML string builders ---------- */
+  function xmlEsc(s) {
+    return String(s)
+      .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function runXml(text, rpr) {
+    var parts = String(text).split(String.fromCharCode(9));
+    var inner = '';
+    var i;
+    for (i = 0; i < parts.length; i++) {
+      if (i > 0) { inner += '<w:tab/>'; }
+      if (parts[i] !== '') { inner += '<w:t xml:space="preserve">' + xmlEsc(parts[i]) + '</w:t>'; }
+    }
+    return '<w:r>' + (rpr ? '<w:rPr>' + rpr + '</w:rPr>' : '') + inner + '</w:r>';
+  }
+
+  function paraXml(runs, ppr) {
+    return '<w:p>' + (ppr ? '<w:pPr>' + ppr + '</w:pPr>' : '') + runs + '</w:p>';
+  }
+
+  function titleXml(name) {
+    return paraXml(runXml(name, '<w:b/><w:sz w:val="28"/>'), '<w:spacing w:after="240"/>');
+  }
+
+  function annotatedParaXml(text, marks) {
+    if (!text.length) { return '<w:p/>'; }
+    var runs = '';
+    var pos = 0;
+    marks.forEach(function (m) {
+      if (m.start > pos) { runs += runXml(text.slice(pos, m.start)); }
+      runs += runXml(text.slice(m.start, m.end), '<w:color w:val="' + hexOf(m.code) + '"/><w:u w:val="single"/>');
+      runs += runXml(' [' + m.code + ']', '<w:b/><w:color w:val="' + hexOf(m.code) + '"/>');
+      pos = m.end;
+    });
+    if (pos < text.length) { runs += runXml(text.slice(pos)); }
+    return paraXml(runs);
+  }
+
+  function trailingXml(revised, includeRevised) {
+    var x = '<w:p/>';
+    var leg = runXml('Codes: ', '<w:b/>');
+    CODES.forEach(function (c, i) {
+      if (i > 0) { leg += runXml('   |   '); }
+      leg += runXml(c, '<w:b/><w:color w:val="' + hexOf(c) + '"/>') + runXml(' = ' + LABELS[c]);
+    });
+    x += paraXml(leg);
+    x += paraXml(runXml('Generated: ' + new Date().toLocaleString(), '<w:color w:val="666666"/><w:sz w:val="18"/>'));
+    if (includeRevised && revised.trim()) {
+      x += paraXml(runXml('REVISED VERSION', '<w:b/><w:sz w:val="28"/>'), '<w:pageBreakBefore/>');
+      revised.replace(/\s+$/, '').split(/\n/).forEach(function (ln) {
+        x += ln.trim() ? paraXml(runXml(ln)) : '<w:p/>';
+      });
+    }
+    return x;
+  }
+
+  /* ---------- DOCX: reading an uploaded file ---------- */
+  function nearestP(node) {
+    var n = node.parentNode;
+    while (n) {
+      if (n.nodeType === 1 && n.localName === 'p' && n.namespaceURI === W) { return n; }
+      n = n.parentNode;
+    }
+    return null;
+  }
+
+  function classifyRun(r) {
+    var items = [];
+    var text = '';
+    var k, node, n;
+    for (k = 0; k < r.childNodes.length; k++) {
+      node = r.childNodes[k];
+      if (node.nodeType !== 1) { continue; }
+      n = node.localName;
+      if (n === 'rPr') { continue; }
+      if (n === 't') {
+        var tx = node.textContent.replace(/[\r\n]/g, ' ');
+        if (tx.length) { items.push({ type: 't', text: tx, len: tx.length }); text += tx; }
+      } else if (n === 'tab') {
+        items.push({ type: 'tab', len: 1 });
+        text += String.fromCharCode(9);
+      } else if (n === 'br' || n === 'cr') {
+        items.push({ type: 'br', node: node, len: 1 });
+        text += ' ';
+      } else {
+        return null;
+      }
+    }
+    if (!text.length) { return null; }
+    return { el: r, items: items, text: text };
+  }
+
+  function extractDocxParagraphs(xmlDoc) {
+    var ps = xmlDoc.getElementsByTagNameNS(W, 'p');
+    var out = [];
+    var i, j;
+    for (i = 0; i < ps.length; i++) {
+      var p = ps[i];
+      var rEls = p.getElementsByTagNameNS(W, 'r');
+      var runs = [];
+      var pos = 0;
+      for (j = 0; j < rEls.length; j++) {
+        if (nearestP(rEls[j]) !== p) { continue; }
+        var info = classifyRun(rEls[j]);
+        if (!info) { continue; }
+        info.start = pos;
+        pos += info.text.length;
+        runs.push(info);
+      }
+      out.push({ p: p, runs: runs, text: runs.map(function (x) { return x.text; }).join('') });
+    }
+    return out;
+  }
+
+  /* ---------- DOCX: editing the original file in place ---------- */
+  function getRPr(run) {
+    var k;
+    for (k = run.firstChild; k; k = k.nextSibling) {
+      if (k.nodeType === 1 && k.localName === 'rPr') { return k; }
+    }
+    return null;
+  }
+
+  function rprRemove(rPr, name) {
+    var k = rPr.firstChild;
+    var next;
+    while (k) {
+      next = k.nextSibling;
+      if (k.nodeType === 1 && k.localName === name) { rPr.removeChild(k); }
+      k = next;
+    }
+  }
+
+  function rprSet(doc, rPr, name, val) {
+    rprRemove(rPr, name);
+    var el = doc.createElementNS(W, 'w:' + name);
+    if (val !== null) { el.setAttributeNS(W, 'w:val', val); }
+    var idx = RPR_ORDER.indexOf(name);
+    var k;
+    for (k = rPr.firstChild; k; k = k.nextSibling) {
+      if (k.nodeType === 1 && RPR_ORDER.indexOf(k.localName) > idx) { rPr.insertBefore(el, k); return; }
+    }
+    rPr.appendChild(el);
+  }
+
+  function pieceChildren(doc, items, a, b) {
+    var out = [];
+    var off = 0;
+    items.forEach(function (it) {
+      var s = Math.max(a, off);
+      var e = Math.min(b, off + it.len);
+      if (e > s) {
+        if (it.type === 't') {
+          var t = doc.createElementNS(W, 'w:t');
+          t.setAttributeNS(XMLNS, 'xml:space', 'preserve');
+          t.textContent = it.text.slice(s - off, e - off);
+          out.push(t);
+        } else if (it.type === 'tab') {
+          out.push(doc.createElementNS(W, 'w:tab'));
+        } else {
+          out.push(it.node.cloneNode(true));
+        }
+      }
+      off += it.len;
+    });
+    return out;
+  }
+
+  function applyMarks(doc, para, marks) {
+    if (!marks.length) { return; }
+    para.runs.forEach(function (info) {
+      var rs = info.start;
+      var re = rs + info.text.length;
+      var cuts = [rs, re];
+      marks.forEach(function (m) {
+        if (m.start > rs && m.start < re) { cuts.push(m.start); }
+        if (m.end > rs && m.end < re) { cuts.push(m.end); }
+      });
+      cuts.sort(function (a, b) { return a - b; });
+      var uniq = [];
+      cuts.forEach(function (c) { if (!uniq.length || uniq[uniq.length - 1] !== c) { uniq.push(c); } });
+      var pieces = [];
+      var any = false;
+      var i, q;
+      for (i = 0; i < uniq.length - 1; i++) {
+        var a = uniq[i];
+        var b = uniq[i + 1];
+        var mk = null;
+        for (q = 0; q < marks.length; q++) {
+          if (marks[q].start <= a && b <= marks[q].end) { mk = marks[q]; break; }
+        }
+        if (mk) { any = true; }
+        pieces.push({ a: a, b: b, mk: mk });
+      }
+      if (!any) { return; }
+      var baseRPr = getRPr(info.el);
+      var parent = info.el.parentNode;
+      var nodes = [];
+      pieces.forEach(function (pc) {
+        var nr = info.el.cloneNode(false);
+        var rp = baseRPr ? baseRPr.cloneNode(true) : null;
+        if (pc.mk) {
+          if (!rp) { rp = doc.createElementNS(W, 'w:rPr'); }
+          rprSet(doc, rp, 'color', hexOf(pc.mk.code));
+          rprSet(doc, rp, 'u', 'single');
+        }
+        if (rp) { nr.appendChild(rp); }
+        pieceChildren(doc, info.items, pc.a - rs, pc.b - rs).forEach(function (c) { nr.appendChild(c); });
+        nodes.push(nr);
+        if (pc.mk && pc.b === pc.mk.end) {
+          var cr = doc.createElementNS(W, 'w:r');
+          var crp = baseRPr ? baseRPr.cloneNode(true) : doc.createElementNS(W, 'w:rPr');
+          rprRemove(crp, 'u');
+          rprSet(doc, crp, 'b', null);
+          rprSet(doc, crp, 'color', hexOf(pc.mk.code));
+          cr.appendChild(crp);
+          var ct = doc.createElementNS(W, 'w:t');
+          ct.setAttributeNS(XMLNS, 'xml:space', 'preserve');
+          ct.textContent = ' [' + pc.mk.code + ']';
+          cr.appendChild(ct);
+          nodes.push(cr);
+        }
+      });
+      nodes.forEach(function (n) { parent.insertBefore(n, info.el); });
+      parent.removeChild(info.el);
+    });
+  }
+
+  function firstElement(node) {
+    var k;
+    for (k = node.firstChild; k; k = k.nextSibling) { if (k.nodeType === 1) { return k; } }
+    return null;
+  }
+
+  function addTitle(doc, name) {
+    var body = doc.getElementsByTagNameNS(W, 'body')[0];
+    if (!body) { throw new Error('document body not found'); }
+    var frag = new DOMParser().parseFromString(
+      '<w:root xmlns:w="' + W + '">' + titleXml(name) + '</w:root>', 'application/xml');
+    if (frag.getElementsByTagName('parsererror').length) { throw new Error('could not build the title'); }
+    body.insertBefore(doc.importNode(firstElement(frag.documentElement), true), body.firstChild);
+  }
+
+  function appendTrailing(doc, revised, includeRevised) {
+    var body = doc.getElementsByTagNameNS(W, 'body')[0];
+    if (!body) { throw new Error('document body not found'); }
+    var frag = new DOMParser().parseFromString(
+      '<w:root xmlns:w="' + W + '">' + trailingXml(revised, includeRevised) + '</w:root>', 'application/xml');
+    if (frag.getElementsByTagName('parsererror').length) { throw new Error('could not build the extra pages'); }
+    var last = body.lastChild;
+    while (last && last.nodeType !== 1) { last = last.previousSibling; }
+    var sect = (last && last.localName === 'sectPr') ? last : null;
+    var kids = frag.documentElement.childNodes;
+    var j;
+    for (j = 0; j < kids.length; j++) {
+      if (kids[j].nodeType === 1) { body.insertBefore(doc.importNode(kids[j], true), sect); }
+    }
+  }
+
+  function buildDocxFromOriginal(d, revised, includeRevised) {
+    var doc = new DOMParser().parseFromString(d.docx.xmlString, 'application/xml');
+    if (doc.getElementsByTagName('parsererror').length) { throw new Error('document.xml could not be parsed'); }
+    var ps = extractDocxParagraphs(doc);
+    if (ps.length !== d.paras.length) { throw new Error('the document structure changed'); }
+    var i;
+    for (i = 0; i < ps.length; i++) {
+      if (ps[i].text === d.paras[i].text && d.paras[i].marks.length) { applyMarks(doc, ps[i], d.paras[i].marks); }
+    }
+    addTitle(doc, d.base);
+    appendTrailing(doc, revised, includeRevised);
+    var xml = new XMLSerializer().serializeToString(doc);
+    if (xml.indexOf('<?xml') !== 0) {
+      xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' + NL + xml;
+    }
+    d.docx.zip.file('word/document.xml', xml);
+    return d.docx.zip.generateAsync({ type: 'blob', mimeType: DOCX_MIME, compression: 'DEFLATE' });
+  }
+
+  /* ---------- DOCX: building a new file with the same paragraphs ---------- */
+  function buildDocxFromScratch(d, revised, includeRevised) {
+    var body = titleXml(d.base);
+    d.paras.forEach(function (p) { body += annotatedParaXml(p.text, p.marks); });
+    body += trailingXml(revised, includeRevised);
+    var head = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+    var docXml = head + '<w:document xmlns:w="' + W + '"><w:body>' + body +
+      '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr>' +
+      '</w:body></w:document>';
+    var stylesXml = head + '<w:styles xmlns:w="' + W + '"><w:docDefaults><w:rPrDefault><w:rPr>' +
+      '<w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr></w:rPrDefault>' +
+      '<w:pPrDefault><w:pPr><w:spacing w:after="160" w:line="360" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>' +
+      '<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style></w:styles>';
+    var ctXml = head + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+      '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+      '<Default Extension="xml" ContentType="application/xml"/>' +
+      '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>' +
+      '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>';
+    var relsXml = head + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>';
+    var docRelsXml = head + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>';
+    var zip = new JSZip();
+    zip.file('[Content_Types].xml', ctXml);
+    zip.folder('_rels').file('.rels', relsXml);
+    var w = zip.folder('word');
+    w.file('document.xml', docXml);
+    w.file('styles.xml', stylesXml);
+    w.folder('_rels').file('document.xml.rels', docRelsXml);
+    return zip.generateAsync({ type: 'blob', mimeType: DOCX_MIME, compression: 'DEFLATE' });
+  }
+
+  function buildDocBlob(d, includeRevised) {
+    var revised = (d.revised || '').replace(/\r\n?/g, '\n');
+    if (d.docx) {
+      try { return buildDocxFromOriginal(d, revised, includeRevised); }
+      catch (e) { /* fall back to a new document with the same paragraphs */ }
+    }
+    return buildDocxFromScratch(d, revised, includeRevised);
+  }
+
+  function buildDocHTML(d, includeRevised) {
+    var revised = (d.revised || '').replace(/\r\n?/g, '\n');
+    var body = d.paras.map(function (p) {
+      return '<p style="margin:0 0 6pt;white-space:pre-wrap;">' +
+        (p.text.trim() ? renderMarked(p.text, p.marks, docWrap, escapeHTML) : '&nbsp;') + '</p>';
+    }).join('');
+    var legend = CODES.map(function (c) {
+      return '<span style="color:' + COLORS[c] + ';"><b>' + c + '</b></span> = ' + LABELS[c];
+    }).join(' &nbsp;|&nbsp; ');
+    var rev = '';
+    if (includeRevised && revised.trim()) {
+      rev = '<br style="page-break-before:always"><h3>REVISED VERSION</h3>' +
+        revised.replace(/\s+$/, '').split(/\n/).map(function (ln) {
+          return '<p style="margin:0 0 6pt;white-space:pre-wrap;">' + (ln.trim() ? escapeHTML(ln) : '&nbsp;') + '</p>';
+        }).join('');
+    }
+    return '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">' +
+      '<head><meta charset="utf-8"><title>LinguaCheck</title></head>' +
+      '<body style="font-family:Calibri,Arial,sans-serif;font-size:12pt;line-height:1.8;">' +
+      '<h2 style="font-size:14pt;">' + escapeHTML(d.base) + '</h2>' +
+      body + '<hr><p style="font-size:10pt;">' + legend + '</p>' +
+      '<p style="font-size:9pt;color:#666666;">Generated: ' + escapeHTML(new Date().toLocaleString()) + '</p>' +
+      rev + '</body></html>';
+  }
+
+  /* ---------- saving files ---------- */
+  function saveBlob(filename, blob) {
+    if (lastUrl) { try { URL.revokeObjectURL(lastUrl); } catch (e0) {} }
+    var url = URL.createObjectURL(blob);
+    lastUrl = url;
+    var links = document.querySelectorAll('.dl-link');
+    var boxes = document.querySelectorAll('.dl-fallback');
+    var i;
+    for (i = 0; i < links.length; i++) {
+      links[i].href = url;
+      links[i].download = filename;
+      links[i].textContent = filename;
+    }
+    for (i = 0; i < boxes.length; i++) { boxes[i].hidden = false; }
+    try {
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function () { document.body.removeChild(a); }, 500);
+      showToast('Exported: ' + filename);
+    } catch (e) {
+      window.open(url, '_blank');
+    }
+  }
+
+  function exportCurrent() {
+    var d = docs[cur];
+    if (!d || d.status !== 'done') { showToast('Nothing to export yet.'); return; }
+    if (!window.JSZip) {
+      saveBlob(safeName(d.base) + '.doc', new Blob([buildDocHTML(d, false)], { type: 'application/msword;charset=utf-8' }));
+      showToast('The .docx library could not load, so a Word-compatible .doc file was created instead.', 5000);
+      return;
+    }
+    buildDocBlob(d, false).then(function (blob) {
+      saveBlob(safeName(d.base) + '.docx', blob);
+    }).catch(function (e) {
+      showToast('Could not build the .docx: ' + e.message, 5000);
+    });
+  }
+
+  function uniqueName(base, used) {
+    var n = base;
+    var k = 2;
+    while (used[n.toLowerCase()]) { n = base + ' (' + k + ')'; k++; }
+    used[n.toLowerCase()] = true;
+    return n;
+  }
+
+  function exportAll() {
+    var ready = doneDocs();
+    if (!ready.length) { showToast('Nothing to export yet.'); return; }
+    if (busy) { return; }
+
+    if (!window.JSZip) {
+      if (ready.length === 1) {
+        saveBlob(safeName(ready[0].base) + '.doc', new Blob([buildDocHTML(ready[0], true)], { type: 'application/msword;charset=utf-8' }));
+        showToast('The .docx library could not load, so a Word-compatible .doc file was created instead.', 5000);
+      } else {
+        showToast('Bulk export needs the JSZip library (internet connection). Please reload the page and try again.', 5000);
+      }
+      return;
+    }
+
+    if (ready.length === 1) {
+      buildDocBlob(ready[0], true).then(function (blob) {
+        saveBlob(safeName(ready[0].base) + '.docx', blob);
+      }).catch(function (e) {
+        showToast('Could not build the .docx: ' + e.message, 5000);
+      });
+      return;
+    }
+
+    busy = true;
+    var btn = $('exportBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Preparing\u2026';
+    var zip = new JSZip();
+    var used = {};
+    var chain = Promise.resolve();
+    ready.forEach(function (d) {
+      chain = chain.then(function () {
+        return buildDocBlob(d, true).then(function (blob) {
+          zip.file(uniqueName(safeName(d.base), used) + '.docx', blob);
+        });
+      });
+    });
+    chain.then(function () {
+      return zip.generateAsync({ type: 'blob', mimeType: 'application/zip', compression: 'DEFLATE' });
+    }).then(function (blob) {
+      busy = false;
+      btn.disabled = false;
+      renderExportButton();
+      saveBlob('LinguaCheck_documents_' + today() + '.zip', blob);
+      var skipped = docs.length - ready.length;
+      if (skipped > 0) { showToast(skipped + ' document(s) were not analyzed and are not in the .zip.', 5000); }
+    }).catch(function (e) {
+      busy = false;
+      btn.disabled = false;
+      renderExportButton();
+      showToast('Could not build the .zip: ' + e.message, 5000);
+    });
+  }
+
+  /* ---------- clipboard ---------- */
+  function copyPlain(text, okMsg) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () {
+        showToast(okMsg);
+      }).catch(function () { fallbackCopy(text, okMsg); });
+    } else {
+      fallbackCopy(text, okMsg);
+    }
+  }
+
+  function fallbackCopy(text, okMsg) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    try {
+      document.execCommand('copy');
+      showToast(okMsg);
+    } catch (e) {
+      showToast('Copy failed \u2014 please select and copy manually.');
+    }
+    document.body.removeChild(ta);
+  }
+
+  function copyAnnotatedRich() {
+    var d = docs[cur];
+    if (!d || d.status !== 'done') { showToast('No annotated text yet.'); return; }
+    var html = d.paras.map(function (p) {
+      return '<p style="font-family:Calibri,Arial,sans-serif;font-size:12pt;margin:0 0 6pt;white-space:pre-wrap;">' +
+        (p.text.trim() ? renderMarked(p.text, p.marks, docWrap, escapeHTML) : '&nbsp;') + '</p>';
+    }).join('');
+    var plain = annotatedPlain(d);
+    var okMsg = 'Annotated text copied. Paste it into Word or Google Docs.';
+
+    function fallback() {
+      var el = document.createElement('div');
+      el.contentEditable = 'true';
+      el.style.cssText = 'position:fixed;left:-9999px;top:0;user-select:text;-webkit-user-select:text;';
+      el.innerHTML = html;
+      document.body.appendChild(el);
+      var range = document.createRange();
+      range.selectNodeContents(el);
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      sel.removeAllRanges();
+      document.body.removeChild(el);
+      showToast(ok ? okMsg : 'Copy failed \u2014 use the .docx download instead.', 4000);
+    }
+
+    try {
+      if (navigator.clipboard && window.ClipboardItem) {
+        navigator.clipboard.write([
+          new ClipboardItem({
+            'text/html': new Blob([html], { type: 'text/html' }),
+            'text/plain': new Blob([plain], { type: 'text/plain' })
+          })
+        ]).then(function () { showToast(okMsg, 4000); }).catch(fallback);
+      } else {
+        fallback();
+      }
+    } catch (e) {
+      fallback();
+    }
+  }
+
+  /* ---------- bulk file upload ---------- */
+  function readAsBuffer(file) {
+    return new Promise(function (resolve, reject) {
+      var fr = new FileReader();
+      fr.onload = function () { resolve(fr.result); };
+      fr.onerror = function () { reject(new Error('read failed')); };
+      fr.readAsArrayBuffer(file);
+    });
+  }
+
+  function readAsText(file) {
+    return new Promise(function (resolve, reject) {
+      var fr = new FileReader();
+      fr.onload = function () { resolve(String(fr.result)); };
+      fr.onerror = function () { reject(new Error('read failed')); };
+      fr.readAsText(file, 'UTF-8');
+    });
+  }
+
+  function readDocxFile(file) {
+    return readAsBuffer(file).then(function (buf) {
+      return JSZip.loadAsync(buf);
+    }).then(function (zip) {
+      var f = zip.file('word/document.xml');
+      if (!f) { throw new Error('not a .docx file'); }
+      return f.async('string').then(function (xml) {
+        xml = xml.replace(/^\uFEFF/, '');
+        var doc = new DOMParser().parseFromString(xml, 'application/xml');
+        if (doc.getElementsByTagName('parsererror').length) { throw new Error('document could not be read'); }
+        var ps = extractDocxParagraphs(doc);
+        return { text: ps.map(function (p) { return p.text; }).join(NL), docx: { zip: zip, xmlString: xml } };
+      });
+    });
+  }
+
+  function loadFiles(fileList) {
+    var files = Array.prototype.slice.call(fileList);
+    if (!files.length) { return; }
+    var added = 0;
+    var bad = [];
+    var chain = Promise.resolve();
+    files.forEach(function (f) {
+      chain = chain.then(function () {
+        var lower = f.name.toLowerCase();
+        var p;
+        if (/\.docx$/.test(lower)) {
+          if (!window.JSZip) { bad.push(f.name + ' (reading .docx needs an internet connection)'); return null; }
+          p = readDocxFile(f);
+        } else if (/\.txt$/.test(lower)) {
+          p = readAsText(f).then(function (t) {
+            return { text: t.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n'), docx: null };
+          });
+        } else {
+          bad.push(f.name + ' (unsupported type)');
+          return null;
+        }
+        return p.then(function (r) {
+          docSeq++;
+          docs.push(newDoc('f' + docSeq, f.name, 'file', r.text, r.docx));
+          added++;
+          renderFileList();
+        }).catch(function () {
+          bad.push(f.name + ' (could not be read)');
+        });
+      });
+    });
+    chain.then(function () {
+      var msg = added + ' file' + (added !== 1 ? 's' : '') + ' added.';
+      if (bad.length) { msg += ' Skipped: ' + bad.join('; '); }
+      showToast(msg, bad.length ? 6000 : 3000);
+      if (doneDocs().length) { renderDocTable(); }
+    });
+  }
+
+  $('fileIn').addEventListener('change', function () {
+    loadFiles(this.files);
+    this.value = '';
+  });
+
+  $('step1').addEventListener('dragover', function (e) {
+    if (e.dataTransfer && e.dataTransfer.types && Array.prototype.indexOf.call(e.dataTransfer.types, 'Files') !== -1) {
+      e.preventDefault();
+    }
+  });
+  $('step1').addEventListener('drop', function (e) {
+    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+      e.preventDefault();
+      loadFiles(e.dataTransfer.files);
+    }
+  });
+
+  $('clearQueueBtn').addEventListener('click', function () {
+    if (busy) { showToast('Please wait until the analysis has finished.'); return; }
+    var keepCur = docs[cur] && docs[cur].kind === 'typed' ? 'typed' : null;
+    docs = docs.filter(function (d) { return d.kind !== 'file'; });
+    cur = -1;
+    if (keepCur) {
+      var i;
+      for (i = 0; i < docs.length; i++) { if (docs[i].id === 'typed') { cur = i; } }
+    }
+    refreshAfterChange();
+  });
+
+  /* ---------- word counters and buttons ---------- */
+  $('studentText').addEventListener('input', function () {
+    updateCounts();
+    saveToHistory(this.value);
+  });
+
+  $('editedText').addEventListener('input', function () {
+    var w = countWords(this.value);
+    $('wordCount2').textContent = w + ' word' + (w !== 1 ? 's' : '');
+    var d = docs[cur];
+    if (d && d.status === 'done') { d.revised = this.value; }
+    updateExportPreview();
+  });
+
+  $('revDocSel').addEventListener('change', function () {
+    cur = parseInt(this.value, 10);
+    showCurrent();
+  });
+
+  $('clearBtn').addEventListener('click', function () {
+    if (!confirm('Clear the text area?')) return;
+    $('studentText').value = '';
+    updateCounts();
+    $('studentText').focus();
+  });
+
+  $('analyzeBtn').addEventListener('click', function () { analyzeAll(false); });
+  $('retryBtn').addEventListener('click', function () { analyzeAll(true); });
+  $('exportBtn').addEventListener('click', exportAll);
+  $('docBtn').addEventListener('click', exportCurrent);
+  $('startOverBtn').addEventListener('click', startOver);
+  $('copyRichBtn').addEventListener('click', copyAnnotatedRich);
+
+  $('emailBtn').addEventListener('click', function () {
+    var ready = doneDocs();
+    if (!ready.length) { showToast('Nothing to send yet.'); return; }
+    exportAll();
+    var note = '(The report was downloaded \u2014 please attach it to this email.)' + NL + NL;
+    var body;
+    if (ready.length === 1) {
+      body = note + buildReportText(ready[0]);
+    } else {
+      body = note + 'Documents (' + ready.length + '):' + NL + ready.map(function (d) {
+        return '- ' + d.name + ': ' + d.stats.errors + ' errors found';
+      }).join(NL);
+    }
+    var subject = encodeURIComponent('LinguaCheck Report \u2014 ' + new Date().toLocaleDateString());
+    setTimeout(function () {
+      window.location.href = 'mailto:moussa.belli@univ-jijel.dz?subject=' + subject + '&body=' + encodeURIComponent(body);
+    }, 800);
+  });
+
+  $('copyRevisedBtn').addEventListener('click', function () {
+    var text = $('editedText').value;
+    if (!text.trim()) { showToast('Nothing to copy yet.'); return; }
+    copyPlain(text, 'Revised text copied to clipboard.');
+  });
+
+  $('copyAnnotatedBtn').addEventListener('click', function () {
+    var d = docs[cur];
+    if (!d || d.status !== 'done' || !d.raw.trim()) { showToast('No feedback to copy yet.'); return; }
+    copyPlain(d.raw, 'Annotated feedback copied to clipboard.');
+  });
+
+  /* ---------- history (typed text only) ---------- */
+  function loadHistory() {
+    try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; }
+    catch (e) { return []; }
+  }
+
+  function saveHistory(arr) {
+    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(arr)); } catch (e) {}
+  }
+
+  function saveToHistory(text) {
+    if (!text || text.trim().length < 10) return;
+    clearTimeout(_saveTimer);
+    _saveTimer = setTimeout(function () {
+      var arr = loadHistory();
+      if (arr.length && arr[0].text === text) return;
+      arr.unshift({ text: text, ts: Date.now() });
+      if (arr.length > MAX_HISTORY) arr = arr.slice(0, MAX_HISTORY);
+      saveHistory(arr);
+    }, 1500);
+  }
+
+  function formatDate(ts) {
+    var d = new Date(ts);
+    return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function renderHistory() {
+    var arr = loadHistory();
+    var list = $('historyList');
+    list.innerHTML = '';
+    if (!arr.length) {
+      list.innerHTML = '<div class="history-empty">No history yet. Typed texts are auto-saved as you type.</div>';
+      return;
+    }
+    arr.forEach(function (item, idx) {
+      var div = document.createElement('div');
+      div.className = 'history-item';
+
+      var meta = document.createElement('div');
+      meta.className = 'history-item-meta';
+
+      var metaSpan = document.createElement('span');
+      metaSpan.textContent = formatDate(item.ts) + ' \u00b7 ' + countWords(item.text) + ' words';
+
+      var del = document.createElement('button');
+      del.className = 'history-item-del';
+      del.textContent = '\u00d7 Delete';
+      del.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var arr2 = loadHistory();
+        arr2.splice(idx, 1);
+        saveHistory(arr2);
+        renderHistory();
+      });
+
+      meta.appendChild(metaSpan);
+      meta.appendChild(del);
+
+      var preview = document.createElement('div');
+      preview.className = 'history-item-preview';
+      preview.textContent = item.text;
+
+      div.appendChild(meta);
+      div.appendChild(preview);
+
+      div.addEventListener('click', function () {
+        $('studentText').value = item.text;
+        updateCounts();
+        closeModal();
+        showToast('Text restored successfully.');
+        $('studentText').focus();
+      });
+
+      list.appendChild(div);
+    });
+  }
+
+  function openModal() { renderHistory(); $('historyModal').classList.add('open'); }
+  function closeModal() { $('historyModal').classList.remove('open'); }
+
+  $('historyBtn').addEventListener('click', openModal);
+  $('modalClose').addEventListener('click', closeModal);
+  $('historyModal').addEventListener('click', function (e) {
+    if (e.target === this) closeModal();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { closeModal(); closeAIModal(); }
+  });
+
+  /* ---------- analysis ---------- */
+  function runPool(items, worker, limit) {
+    return new Promise(function (resolve) {
+      var next = 0, active = 0, done = 0;
+      if (!items.length) { resolve(); return; }
+      function finish() {
+        active--;
+        done++;
+        if (done === items.length) { resolve(); } else { launch(); }
+      }
+      function launch() {
+        while (active < limit && next < items.length) {
+          (function (item) {
+            active++;
+            var p;
+            try { p = worker(item); } catch (e) { p = Promise.reject(e); }
+            p.then(finish, finish);
+          })(items[next++]);
+        }
+      }
+      launch();
+    });
+  }
+
+  function analyzeAll(onlyFailed) {
+    if (busy) { return; }
+
+    if (!onlyFailed) {
+      var typed = $('studentText').value.replace(/\r\n?/g, '\n');
+      var td = findDoc('typed');
+      if (typed.trim()) {
+        if (!td) {
+          docs.push(newDoc('typed', 'Typed text', 'typed', typed, null));
+        } else if (td.text !== typed) {
+          td.text = typed;
+          td.status = 'queued';
+          td.error = '';
+          td.chunks = null;
+          td.paras = [];
+          td.raw = '';
+          td.stats = null;
+        }
+      }
+    }
+
+    var list = docs.filter(function (d) {
+      return onlyFailed ? d.status === 'failed' : (d.status === 'queued' || d.status === 'failed');
+    });
+    if (!list.length) {
+      showToast(docs.length ? 'All documents are already analyzed.' : 'Please write some text or add files first.');
+      return;
+    }
+    if (!ensureAIReady()) { return; }
+    var cfg = activeConfig();
+
+    var jobs = [];
+    list.forEach(function (d) {
+      if (d.status === 'queued' || !d.chunks) {
+        var lines = d.text.split('\n');
+        if (!d.docx) {
+          while (lines.length && !lines[0].trim()) { lines.shift(); }
+          while (lines.length && !lines[lines.length - 1].trim()) { lines.pop(); }
+        }
+        d.lines = lines;
+        d.chunks = buildChunks(lines);
+      }
+      d.chunks.forEach(function (ch) {
+        if (ch.status === 'done') { return; }
+        ch.error = '';
+        ch.needsSetup = false;
+        if (!ch.hasLetters) { ch.status = 'done'; ch.raw = ''; return; }
+        ch.status = 'todo';
+        jobs.push({ d: d, ch: ch });
+      });
+      d.error = '';
+      d.setupHint = false;
+      d.status = 'pending';
+    });
+
+    function settle(d) {
+      if (d.status === 'pending' && d.chunks.every(function (c) { return c.status === 'done' || c.status === 'failed'; })) {
+        finalizeDoc(d);
+      }
+    }
+    list.forEach(settle);
+    renderFileList();
+    renderDocTable();
+
+    if (!jobs.length) { finishRun(list); return; }
+
+    busy = true;
+    var btn = $('analyzeBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Analyzing\u2026';
+    $('retryBtn').disabled = true;
+
+    var completed = 0;
+    runPool(jobs, function (job) {
+      return callWithRetry(cfg, job.ch.text).then(function (raw) {
+        job.ch.raw = raw;
+        job.ch.status = 'done';
+      }).catch(function (e) {
+        job.ch.status = 'failed';
+        job.ch.error = describeError(e);
+        job.ch.needsSetup = !!(e.auth || e.network || e.config || e.status === 404);
+      }).then(function () {
+        completed++;
+        btn.innerHTML = '<span class="spinner"></span> Analyzing ' + completed + '/' + jobs.length + '\u2026';
+        settle(job.d);
+        renderFileList();
+        renderDocTable();
+      });
+    }, CONCURRENCY).then(function () {
+      finishRun(list);
+    });
+  }
+
+  function finishRun(list) {
+    busy = false;
+    var btn = $('analyzeBtn');
+    btn.disabled = false;
+    btn.textContent = 'Analyze';
+    $('retryBtn').disabled = false;
+
+    list.forEach(function (d) {
+      if (d.status === 'pending') {
+        d.status = 'failed';
+        d.error = d.error || 'The analysis did not finish.';
+      }
+    });
+    var failed = list.filter(function (d) { return d.status === 'failed'; });
+    var okCount = list.filter(function (d) { return d.status === 'done'; }).length;
+
+    var ready = doneDocs();
+    if (ready.length) {
+      unlock('step2'); unlock('step3'); unlock('step4');
+      setDone('step1');
+      setActive('step2');
+      if (!docs[cur] || docs[cur].status !== 'done') { cur = docs.indexOf(ready[0]); }
+      showCurrent();
+      setTimeout(function () {
+        $('step2').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    } else {
+      renderDocTable();
+    }
+    renderFileList();
+
+    if (failed.length) {
+      showToast(failed.length + ' document(s) failed: ' + failed[0].name + ' \u2014 ' + failed[0].error + ' Use \u201cRetry failed documents\u201d to try again.', 9000);
+      if (!okCount && failed.every(function (d) { return d.setupHint; })) {
+        openSettings('The AI service could not be reached or rejected the request: ' + failed[0].error + ' Add or check your API key below.');
+      }
+    } else {
+      showToast('Analyzed ' + okCount + ' document' + (okCount !== 1 ? 's' : '') + '.');
+    }
+  }
+
+  /* ---------- start over ---------- */
+  function startOver() {
+    if (busy) { showToast('Please wait until the analysis has finished.'); return; }
+    if (!confirm('Start over? All texts, files and results will be cleared.')) return;
+    $('studentText').value = '';
+    $('editedText').value = '';
+    updateCounts();
+    $('wordCount2').textContent = '0 words';
+    docs = [];
+    cur = -1;
+    var boxes = document.querySelectorAll('.dl-fallback');
+    var i;
+    for (i = 0; i < boxes.length; i++) { boxes[i].hidden = true; }
+    lockSteps();
+    showCurrent();
+    renderFileList();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    $('studentText').focus();
+  }
+
+  /* ---------- start ---------- */
+  loadAIState();
+  renderAIBadge();
+})();
+</script>
+</body>
+</html>
